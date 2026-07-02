@@ -1,0 +1,148 @@
+{
+  "name": "Failure Handling & Retry",
+  "nodes": [
+    {
+      "parameters": {
+        "trigger": "every",
+        "unit": "hours",
+        "value": 1
+      },
+      "name": "Retry Check Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.API_URL }}/api/publish/failed",
+        "authentication": "bearer",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.API_TOKEN }}"
+            }
+          ]
+        }
+      },
+      "name": "Fetch Failed Publishes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "loopOver": "body.logs"
+      },
+      "name": "Loop Over Failed Logs",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $node[\"Loop Over Failed Logs\"].json.retry_count }}",
+              "operation": "lessThan",
+              "value2": 3
+            }
+          ]
+        }
+      },
+      "name": "Check Retry Count",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_URL }}/api/publish/retry",
+        "authentication": "bearer",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "publishLogId",
+              "value": "={{ $node[\"Loop Over Failed Logs\"].json.id }}"
+            }
+          ]
+        }
+      },
+      "name": "Retry Publishing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "subject": "Publishing Retry Failed",
+        "toEmail": "={{ $node[\"Loop Over Failed Logs\"].json.user_email }}",
+        "message": "Your video failed to publish after 3 retry attempts. Please check your account settings and try again."
+      },
+      "name": "Send Failure Notification",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1250, 400]
+    }
+  ],
+  "connections": {
+    "Retry Check Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Failed Publishes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Failed Publishes": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Failed Logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Failed Logs": {
+      "main": [
+        [
+          {
+            "node": "Check Retry Count",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Retry Count": {
+      "main": [
+        [
+          {
+            "node": "Retry Publishing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Failure Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {}
+}

@@ -1,0 +1,100 @@
+{
+  "name": "Bulk Upload Processing",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "/videos/upload",
+        "authType": "bearer",
+        "options": {}
+      },
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_URL }}/api/videos/upload",
+        "authentication": "bearer",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.API_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Send to Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "table": "videos",
+        "dataMode": "raw",
+        "rawData": "={{ JSON.stringify($node[\"Send to Backend\"].json.videos) }}"
+      },
+      "name": "Save to Database",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [750, 300],
+      "credentials": {
+        "postgres": "PostgreSQL"
+      }
+    },
+    {
+      "parameters": {
+        "subject": "Videos Uploaded Successfully",
+        "toEmail": "{{ $node[\"Webhook Trigger\"].json.email }}",
+        "message": "Your {{ $node[\"Send to Backend\"].json.count }} videos have been uploaded successfully."
+      },
+      "name": "Send Confirmation Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1000, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Send to Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to Backend": {
+      "main": [
+        [
+          {
+            "node": "Save to Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Database": {
+      "main": [
+        [
+          {
+            "node": "Send Confirmation Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {}
+}

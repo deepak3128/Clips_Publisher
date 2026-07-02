@@ -1,0 +1,177 @@
+{
+  "name": "Scheduled Publishing",
+  "nodes": [
+    {
+      "parameters": {
+        "trigger": "every",
+        "unit": "minutes",
+        "value": 5
+      },
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.API_URL }}/api/schedules/pending",
+        "authentication": "bearer",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.API_TOKEN }}"
+            }
+          ]
+        }
+      },
+      "name": "Fetch Due Videos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "loopOver": "body.schedules"
+      },
+      "name": "Loop Over Schedules",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_URL }}/api/publish/youtube",
+        "authentication": "bearer",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "videoId",
+              "value": "={{ $node[\"Loop Over Schedules\"].json.video_id }}"
+            },
+            {
+              "name": "platform",
+              "value": "youtube"
+            }
+          ]
+        }
+      },
+      "name": "Publish to YouTube",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1000, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_URL }}/api/publish/instagram",
+        "authentication": "bearer",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "videoId",
+              "value": "={{ $node[\"Loop Over Schedules\"].json.video_id }}"
+            },
+            {
+              "name": "platform",
+              "value": "instagram"
+            }
+          ]
+        }
+      },
+      "name": "Publish to Instagram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1000, 400]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.API_URL }}/api/schedules/{{ $node[\"Loop Over Schedules\"].json.id }}/status",
+        "authentication": "bearer",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "published"
+            }
+          ]
+        }
+      },
+      "name": "Update Schedule Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 300]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Due Videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Due Videos": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Schedules",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Schedules": {
+      "main": [
+        [
+          {
+            "node": "Publish to YouTube",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Publish to Instagram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish to YouTube": {
+      "main": [
+        [
+          {
+            "node": "Update Schedule Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish to Instagram": {
+      "main": [
+        [
+          {
+            "node": "Update Schedule Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {}
+}
