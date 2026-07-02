@@ -1,5 +1,5 @@
-import { useAuthStore } from './auth-store';
-import { apiClient } from './api';
+import { useAuthStore } from '@/lib/auth-store';
+import { apiClient } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 
 export const useAuth = () => {
