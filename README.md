@@ -1,495 +1,230 @@
-# AutoShorts Publisher
+# Clips Publisher
 
-A production-ready SaaS platform for uploading multiple short-form videos in bulk and automatically publishing them to YouTube Shorts and Instagram Reels based on predefined schedules.
+A Next.js + Express application for turning a YouTube link, a public video URL, or a locally uploaded video into short clips with automatically generated captions. Each finished clip can be downloaded or published to YouTube Shorts / Instagram Reels.
+
+## What it does
+
+1. Provide a source video (local upload, YouTube link, or public MP4 URL).
+2. Choose how many clips to make and how captions should look (font, size, colour, bold, italic, position).
+3. The backend finds the most active moments, transcribes speech with Whisper, renders each clip with burned-in captions, and reports progress.
+4. Download the clips individually or publish them to connected social accounts.
+
+The older bulk-upload, scheduling, admin, and n8n features remain in the codebase; the clip publisher is now the primary flow at `/clips`.
 
 ## Features
 
-✨ **Core Features**
+- Clip source support: local file upload, YouTube URL, and direct public video URL
+- Highlight-based clipping using silence and scene-change detection
+- Automatic speech transcription and timed caption rendering via Whisper
+- Caption styling: font, size, colour, bold, italic, and top/bottom placement
+- Clip job tracking with progress polling
+- Download rendered MP4 clips
+- Publish clips to YouTube Shorts or Instagram Reels
+- User accounts, roles, and admin controls
+- Optional n8n workflows for automation
 
-- ✂️ **Clip Publisher** - Turn a YouTube link, public URL, or local video into smart clips with auto captions, then download or publish them
-- 🎥 **Bulk Video Upload** - Upload 50+ videos simultaneously with drag-and-drop interface
-- 📅 **Smart Scheduling** - Fixed interval, custom dates, or bulk scheduling with multiple posts per day
-- 🚀 **Multi-Platform Publishing** - Auto-publish to YouTube Shorts and Instagram Reels
-- 📊 **Analytics Dashboard** - Real-time statistics and publishing metrics
-- 🔄 **Automatic Retries** - Failed uploads retry up to 3 times automatically
-- 📧 **Notifications** - Email and Telegram alerts for upload/publish events
-- 🔐 **OAuth Integration** - Google and Meta OAuth for seamless authentication
-- 💾 **Cloud Storage** - Cloudflare R2 or AWS S3 integration
-- ⚡ **n8n Automation** - Workflow automation for bulk operations
-
-## Technology Stack
+## Stack
 
 ### Frontend
-- **Framework**: Next.js 14 with App Router
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS + Custom components
-- **State Management**: Zustand
-- **HTTP Client**: Axios
-- **UI Components**: Custom + Shadcn/ui patterns
+
+- Next.js 14 (App Router), TypeScript
+- Tailwind CSS and Radix UI primitives
+- Zustand for state, Axios for API calls
 
 ### Backend
-- **Runtime**: Node.js 18+
-- **Framework**: Express
-- **Language**: TypeScript
-- **Database**: PostgreSQL 14+
-- **ORM**: Knex.js
-- **Authentication**: JWT + OAuth
-- **File Storage**: Cloudflare R2 / AWS S3
-- **Email**: Nodemailer
-- **Logging**: Pino
 
-### Automation & DevOps
-- **Automation**: n8n
-- **Containerization**: Docker & Docker Compose
-- **Database**: PostgreSQL
-- **Queue**: Redis
-- **Cache**: Redis
-- **APIs**: YouTube Data API v3, Meta Graph API
+- Node.js 18+, Express, TypeScript
+- PostgreSQL with Knex.js
+- JWT authentication and OAuth callbacks
+- BullMQ/Redis for upload jobs (optional)
+- ffmpeg-static / ffprobe-static for video processing
+- @distube/ytdl-core for YouTube downloads
+- OpenAI Whisper for transcription
+- Cloudflare R2 or AWS S3 for optional clip storage
 
-### Deployment
-- **Frontend**: Vercel
-- **Backend**: Railway / Render
-- **Database**: Railway PostgreSQL / AWS RDS
-- **Storage**: Cloudflare R2
+## Project structure
 
-## Project Structure
-
-```
+```text
 autoshorts-publisher/
-├── backend/                    # Node.js Express API
-│   ├── src/
-│   │   ├── config/            # Configuration files
-│   │   ├── controllers/       # Request handlers
-│   │   ├── middleware/        # Express middleware
-│   │   ├── routes/            # API routes
-│   │   ├── services/          # Business logic
-│   │   ├── types/             # TypeScript types
-│   │   ├── utils/             # Utilities (db, storage, email, jwt)
-│   │   ├── app.ts             # Express app setup
-│   │   └── index.ts           # Entry point
-│   ├── database/
-│   │   └── migrations/        # Database migrations
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── README.md
-│
-├── frontend/                   # Next.js React Application
-│   ├── app/                    # App Router pages
-│   │   ├── auth/              # Authentication pages
-│   │   ├── dashboard/         # Dashboard
-│   │   ├── upload/            # Video upload
-│   │   ├── library/           # Video library
-│   │   ├── schedule/          # Scheduling
-│   │   ├── accounts/          # Social accounts
-│   │   ├── settings/          # Settings
-│   │   └── layout.tsx         # Root layout
-│   ├── components/            # React components
-│   │   ├── ui/                # UI components
-│   │   ├── Layout.tsx
-│   │   └── DragDropArea.tsx
-│   ├── hooks/                 # Custom hooks
-│   ├── lib/                   # Utilities & API client
-│   ├── types/                 # TypeScript types
-│   ├── public/                # Static assets
-│   ├── package.json
-│   └── README.md
-│
-├── n8n-workflows/             # n8n automation workflows
-│   ├── bulk-upload-processing.json
-│   ├── scheduled-publishing.json
-│   ├── failure-handling-retry.json
-│   ├── notification-handler.json
-│   └── README.md
-│
-├── docker/                    # Docker configuration
-│   ├── Dockerfile.backend
-│   ├── Dockerfile.frontend
-│   ├── docker-compose.yml
-│   ├── .env.example
-│   └── README.md
-│
-├── docs/                      # Documentation
-│   ├── DEPLOYMENT.md          # Deployment guide
-│   ├── API.md                 # API documentation
-│   └── ARCHITECTURE.md        # System architecture
-│
-└── README.md                  # This file
+├── backend/
+│   ├── database/migrations/     # Schema migrations
+│   ├── database/seeds/          # Demo data
+│   └── src/
+│       ├── config/              # Environment configuration
+│       ├── controllers/         # HTTP handlers
+│       ├── middleware/          # Auth, admin, errors
+│       ├── routes/              # API route definitions
+│       ├── services/            # clip, publish, queue, admin, etc.
+│       ├── types/               # Shared TypeScript types
+│       └── utils/               # db, storage, email, jwt, n8n, telegram
+├── frontend/
+│   ├── app/
+│   │   ├── clips/               # Clip publisher wizard
+│   │   ├── admin/               # Admin dashboard
+│   │   ├── auth/                # Login and registration
+│   │   └── ...                  # Dashboard, library, schedule, upload, etc.
+│   ├── components/              # Shared UI components
+│   ├── hooks/                   # useAuth and helpers
+│   ├── lib/                     # API client and auth store
+│   └── types/                   # Shared TypeScript types
+├── docker/                      # Optional Docker Compose setup
+├── docs/                        # API, deployment, architecture docs
+└── n8n-workflows/               # Optional automation workflows
 ```
 
-## Quick Start
+## Prerequisites
 
-### Prerequisites
+- Node.js 18 or newer
+- PostgreSQL 14 or newer
+- Redis (optional; set `REDIS_ENABLED=false` to run without it)
+- An OpenAI API key for auto captions
+- Connected YouTube / Instagram accounts for publishing
 
-- Node.js 18+
-- Docker & Docker Compose (for containerized setup)
-- PostgreSQL 14+ (if not using Docker)
-- Git
+ffmpeg, ffprobe, and YouTube download support are installed through npm dependencies; you do not need to install those binaries system-wide.
 
-### Local Development
+## Local development
 
-#### 1. Clone Repository
+### 1. Clone and install
 
 ```bash
-git clone https://github.com/yourusername/autoshorts-publisher.git
-cd autoshorts-publisher
+git clone https://github.com/deepak3128/Clips_Publisher.git
+cd Clips_Publisher
+
+cd backend
+npm install
+
+cd ../frontend
+npm install
 ```
 
-#### 2. Setup Backend
+### 2. Configure the backend
 
 ```bash
 cd backend
-
-# Install dependencies
-npm install
-
-# Create .env file
 cp .env.example .env
+```
 
-# Edit .env with your configuration
-nano .env
+Set at minimum:
 
-# Run migrations
+- `DATABASE_URL` (or the individual `DB_*` values)
+- `JWT_SECRET`
+- `API_TOKEN` (shared token for n8n/service calls)
+- `OPENAI_API_KEY` (auto captions)
+
+Then run migrations and optional demo seed data:
+
+```bash
 npm run migrate:up
+npm run seed
+```
 
-# Start development server
+Start the API:
+
+```bash
 npm run dev
 ```
 
-Backend will be available at `http://localhost:5000`
+The backend runs at `http://localhost:5000`.
 
-#### 3. Setup Frontend
+### 3. Configure the frontend
 
 ```bash
-cd ../frontend
-
-# Install dependencies
-npm install
-
-# Create .env.local file
+cd frontend
 cp .env.example .env.local
+```
 
-# Edit .env.local
-nano .env.local
+Set `NEXT_PUBLIC_API_URL` to your backend URL, then start it:
 
-# Start development server
+```bash
 npm run dev
 ```
 
-Frontend will be available at `http://localhost:3000`
+The frontend runs at `http://localhost:3000`. Log in, then open `/clips`.
 
-#### 4. Optional: Setup n8n
+Demo account after seeding: `demo@autoshorts.com` / `password123`.
+
+## Environment variables
+
+### Backend
+
+| Variable | Purpose |
+| --- | --- |
+| `DATABASE_URL` / `DB_*` | PostgreSQL connection |
+| `JWT_SECRET`, `JWT_EXPIRY` | JWT signing |
+| `API_TOKEN` | Shared token for n8n/service endpoints |
+| `REDIS_ENABLED`, `REDIS_HOST`, `REDIS_PORT` | Upload queue |
+| `CLIPS_DIR`, `CLIPS_PUBLIC_URL`, `MAX_CLIP_DURATION_SECONDS` | Clip output and download URLs |
+| `OPENAI_API_KEY`, `OPENAI_TRANSCRIPTION_MODEL` | Whisper transcription |
+| `GOOGLE_CLIENT_*`, `META_APP_*`, `YOUTUBE_API_KEY` | OAuth and platform APIs |
+| `CLOUDFLARE_*` or `AWS_*` | Optional object storage |
+| `SMTP_*`, `TELEGRAM_BOT_TOKEN` | Notifications |
+| `N8N_URL`, `N8N_API_KEY` | Optional n8n webhooks |
+
+See `backend/.env.example` for the full list.
+
+### Frontend
+
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_API_URL` | Backend API base URL |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Google OAuth (optional UI) |
+| `NEXT_PUBLIC_META_APP_ID` | Meta OAuth (optional UI) |
+| `NEXT_PUBLIC_MAX_CLIP_SECONDS` | Displayed clip length limit |
+
+## API
+
+The full API reference lives in [docs/API.md](docs/API.md). The main clip endpoints are:
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| POST | `/api/clips/upload` | Create a job from a local video |
+| POST | `/api/clips/url` | Create a job from a YouTube or public URL |
+| GET | `/api/clips/jobs` | List recent jobs |
+| GET | `/api/clips/jobs/:jobId` | Job status and progress |
+| GET | `/api/clips/jobs/:jobId/clips` | Rendered clips |
+| POST | `/api/clips/:clipId/publish` | Publish a clip to YouTube or Instagram |
+
+## Scripts
+
+### Backend
 
 ```bash
-docker pull n8nio/n8n
-docker run -it -p 5678:5678 n8nio/n8n
+npm run dev          # Development server
+npm run build        # TypeScript build
+npm run start        # Run built output
+npm run lint         # ESLint
+npm run migrate:up   # Apply migrations
+npm run migrate:down # Roll back last migration
+npm run seed         # Seed demo data
 ```
 
-n8n will be available at `http://localhost:5678`
+### Frontend
 
-### Docker Setup
+```bash
+npm run dev     # Development server
+npm run build   # Production build
+npm run start   # Serve production build
+npm run lint    # ESLint
+```
+
+There are no automated test scripts yet.
+
+## Docker
+
+An optional Docker Compose setup is in `docker/`:
 
 ```bash
 cd docker
-
-# Create .env file
 cp .env.example .env
-
-# Edit configuration
-nano .env
-
-# Start all services
-docker-compose up -d
-
-# Run migrations
-docker-compose exec backend npm run migrate:up
-
-# Check status
-docker-compose ps
+docker compose up -d
+docker compose exec backend npm run migrate:up
 ```
 
-Access services:
-- Frontend: http://localhost:3000
-- Backend: http://localhost:5000
-- n8n: http://localhost:5678
-- PostgreSQL: localhost:5432
+This starts PostgreSQL, Redis, the backend, the frontend, and n8n.
 
-## API Documentation
+## Notes
 
-### Authentication
-
-```bash
-# Register
-POST /api/auth/register
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "name": "John Doe",
-  "password": "password123"
-}
-
-# Response
-{
-  "user": {
-    "id": "uuid",
-    "email": "user@example.com",
-    "name": "John Doe"
-  },
-  "token": "jwt_token"
-}
-```
-
-### Videos
-
-```bash
-# Upload videos
-POST /api/videos/upload
-Content-Type: multipart/form-data
-Authorization: Bearer {token}
-
-files: [video1.mp4, video2.mp4, ...]
-
-# Get videos
-GET /api/videos?status=draft&limit=20&offset=0
-Authorization: Bearer {token}
-
-# Get dashboard stats
-GET /api/videos/stats
-Authorization: Bearer {token}
-```
-
-### Scheduling
-
-```bash
-# Bulk schedule
-POST /api/schedules/bulk
-Content-Type: application/json
-Authorization: Bearer {token}
-
-{
-  "videoIds": ["id1", "id2"],
-  "platform": "both",
-  "startDate": "2024-01-01",
-  "postsPerDay": 2,
-  "postingTimes": ["10:00", "20:00"]
-}
-```
-
-### Social Accounts
-
-```bash
-# Get connected accounts
-GET /api/accounts
-Authorization: Bearer {token}
-
-# Connect YouTube
-POST /api/accounts/connect
-Content-Type: application/json
-Authorization: Bearer {token}
-
-{
-  "platform": "youtube",
-  "accessToken": "...",
-  "accountDetails": {...}
-}
-```
-
-See [API.md](docs/API.md) for complete documentation.
-
-## Configuration
-
-### Environment Variables
-
-#### Backend
-
-- `DATABASE_URL` - PostgreSQL connection string
-- `JWT_SECRET` - JWT signing secret
-- `API_TOKEN` - Shared token used by n8n to call publish/schedule endpoints
-- `REDIS_ENABLED` / `REDIS_HOST` / `REDIS_PORT` - Upload queue (set `REDIS_ENABLED=false` to run without Redis)
-- `CLIPS_DIR` / `CLIPS_PUBLIC_URL` / `MAX_CLIP_DURATION_SECONDS` - Clip rendering output and download URLs
-- `OPENAI_API_KEY` / `OPENAI_TRANSCRIPTION_MODEL` - Whisper transcription for auto captions
-- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` - Google OAuth
-- `META_APP_ID` / `META_APP_SECRET` - Meta OAuth
-- `YOUTUBE_API_KEY` - YouTube Data API key
-- `CLOUDFLARE_*` - Cloudflare R2 credentials
-- `SMTP_*` - Email SMTP configuration
-- `TELEGRAM_BOT_TOKEN` - Telegram bot token
-
-#### Frontend
-
-- `NEXT_PUBLIC_API_URL` - Backend API URL
-
-See `.env.example` files for complete list.
-
-## Database Schema
-
-### Users Table
-```sql
-CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email VARCHAR(255) UNIQUE NOT NULL,
-  name VARCHAR(255) NOT NULL,
-  password VARCHAR(255),
-  google_id VARCHAR(255) UNIQUE,
-  meta_id VARCHAR(255) UNIQUE,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-### Videos Table
-```sql
-CREATE TABLE videos (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  title VARCHAR(255) NOT NULL,
-  caption TEXT,
-  hashtags JSONB DEFAULT '[]',
-  file_url TEXT NOT NULL,
-  file_name VARCHAR(255) NOT NULL,
-  file_size BIGINT NOT NULL,
-  status ENUM ('draft', 'scheduled', 'publishing', 'published', 'failed'),
-  uploaded_at TIMESTAMP DEFAULT NOW(),
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-See migrations in `backend/database/migrations/` for complete schema.
-
-## Deployment
-
-### Quick Deploy
-
-#### Frontend to Vercel
-```bash
-npm i -g vercel
-cd frontend
-vercel
-```
-
-#### Backend to Railway
-1. Connect GitHub repo to Railway
-2. Add PostgreSQL addon
-3. Set environment variables
-4. Deploy
-
-See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed instructions.
-
-## n8n Workflows
-
-Included automation workflows:
-
-1. **Bulk Upload Processing** - Processes uploaded videos
-2. **Scheduled Publishing** - Publishes videos at scheduled times
-3. **Failure Handling** - Retries failed uploads
-4. **Notification Handler** - Routes notifications to channels
-
-Import workflows from `n8n-workflows/` directory.
-
-## Development
-
-### Running Tests
-
-```bash
-cd backend
-npm test
-
-cd ../frontend
-npm test
-```
-
-### Code Quality
-
-```bash
-# Linting
-npm run lint
-
-# Formatting
-npm run format
-```
-
-### Building for Production
-
-```bash
-# Backend
-cd backend
-npm run build
-
-# Frontend
-cd frontend
-npm run build
-```
-
-## Performance Optimization
-
-### Frontend
-- Next.js Image Optimization
-- Code splitting
-- Dynamic imports
-- Caching strategies
-
-### Backend
-- Database connection pooling
-- Redis caching
-- Request rate limiting
-- Efficient file uploads
-
-### Database
-- Proper indexing
-- Query optimization
-- Connection pooling with PgBouncer
-
-## Security
-
-- JWT-based authentication
-- OAuth 2.0 integration
-- HTTPS enforced
-- CORS configuration
-- SQL injection prevention
-- XSS protection
-- CSRF tokens
-- Rate limiting
-- Secure password hashing (bcrypt)
-- Encrypted token storage
-
-## Contributing
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
-
-## License
-
-This project is licensed under the MIT License - see [LICENSE](LICENSE) file for details.
-
-## Support
-
-For support, email support@autoshorts.com or open an issue on GitHub.
-
-## Roadmap
-
-- [ ] TikTok integration
-- [ ] LinkedIn video support
-- [ ] AI caption generation
-- [ ] Auto hashtag suggestions
-- [ ] Analytics dashboard enhancements
-- [ ] Team collaboration features
-- [ ] White-label SaaS version
-- [ ] Mobile apps (iOS/Android)
-
-## Acknowledgments
-
-- YouTube Data API
-- Meta Graph API
-- Cloudflare R2
-- n8n community
-- Open source contributors
-
----
-
-**Built with ❤️ for content creators**
-
-Made with Next.js, Express, PostgreSQL, and n8n
+- Auto captions require `OPENAI_API_KEY`. Without it, clips are rendered without captions.
+- YouTube downloading uses `@distube/ytdl-core`; some videos may fail because of YouTube anti-bot controls.
+- Publishing needs connected social accounts and a publicly reachable `CLIPS_PUBLIC_URL` or configured R2/S3 storage.
+- n8n workflows are optional and are not required for the clip publisher.
