@@ -449,7 +449,23 @@ async function renderClip(
   ]);
 }
 
+function storageConfigured(): boolean {
+  if (config.storage.type === 'r2') {
+    return Boolean(
+      config.storage.cloudflare.endpoint && config.storage.cloudflare.accessKeyId,
+    );
+  }
+
+  return Boolean(config.storage.aws.bucketName && config.storage.aws.accessKeyId);
+}
+
 async function publicFileUrl(jobId: string, fileName: string, filePath: string): Promise<string> {
+  const localUrl = `${config.clips.publicUrl}/${jobId}/${fileName}`;
+
+  if (!storageConfigured()) {
+    return localUrl;
+  }
+
   try {
     const buffer = await fsp.readFile(filePath);
     return await getStorageProvider().upload({
@@ -459,7 +475,7 @@ async function publicFileUrl(jobId: string, fileName: string, filePath: string):
     });
   } catch (error) {
     logger.warn({ error }, 'Storage upload failed; using local clip URL');
-    return `${config.clips.publicUrl}/${jobId}/${fileName}`;
+    return localUrl;
   }
 }
 
