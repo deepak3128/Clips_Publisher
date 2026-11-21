@@ -103,6 +103,8 @@ dist/
 # Uploaded files (if stored locally for testing)
 uploads/
 public/uploads/
+.clip-uploads/
+clips/
 
 # n8n workflow backups
 n8n_backup/

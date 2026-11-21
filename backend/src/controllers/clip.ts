@@ -4,7 +4,6 @@ import fsp from 'fs/promises';
 import path from 'path';
 import * as clipService from '../services/clip';
 import { AppError } from '../middleware/error';
-import config from '../config';
 import logger from '../utils/logger';
 import type { ClipSettings } from '../services/clip';
 
@@ -49,7 +48,8 @@ export async function createFromUpload(req: Request, res: Response, next: NextFu
       throw new AppError('A video file is required', 400);
     }
 
-    const dir = path.resolve(process.cwd(), config.clips.dir, 'uploads');
+    // Keep source uploads outside the publicly served clips directory.
+    const dir = path.resolve(process.cwd(), '.clip-uploads');
     await fsp.mkdir(dir, { recursive: true });
 
     const safeName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
