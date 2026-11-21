@@ -416,6 +416,69 @@ Authorization: Bearer {token}
 
 ---
 
+## Clip Publisher Endpoints
+
+The clip pipeline accepts a local upload, a YouTube link, or any public video URL. It finds the
+most active moments, optionally transcribes speech for timed captions, renders short MP4 clips,
+and returns them with both download URLs and publish actions.
+
+### Create a clip job
+
+```http
+POST /clips/upload
+Content-Type: multipart/form-data
+Authorization: Bearer {token}
+
+video: <file>
+clipCount: 5
+font: Arial
+fontSize: 48
+fontColor: #ffffff
+bold: true
+italic: false
+position: bottom
+autoCaptions: true
+```
+
+```http
+POST /clips/url
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{
+  "url": "https://youtube.com/watch?v=...",
+  "clipCount": 5,
+  "font": "Arial",
+  "autoCaptions": true
+}
+```
+
+**Response:** `201 Created` with `{ "job": { "id": "...", "status": "queued", "progress": 0 } }`.
+
+### Track and list jobs
+
+| Method | Endpoint | Description |
+| ------ | -------- | ----------- |
+| GET | `/clips/jobs` | Recent jobs for the current user |
+| GET | `/clips/jobs/:jobId` | Job status and progress |
+| GET | `/clips/jobs/:jobId/clips` | Rendered clips for a completed job |
+
+### Download and publish a clip
+
+Each clip response contains `file_url`, which can be used directly as a download link.
+
+```http
+POST /clips/:clipId/publish
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{ "platform": "youtube" }
+```
+
+`platform` may be `youtube` or `instagram`. Connected accounts are required for publishing.
+
+---
+
 ## Publish Endpoints
 
 These endpoints are used by the n8n automation workflows. They accept either a normal user JWT

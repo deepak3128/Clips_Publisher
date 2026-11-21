@@ -6,6 +6,8 @@ import path from 'path';
 import axios from 'axios';
 import FormData from 'form-data';
 import { Ytdl } from '@distube/ytdl-core';
+import ffmpegBin from 'ffmpeg-static';
+import ffprobeBin from 'ffprobe-static';
 import { getDatabase } from '../utils/database';
 import { getStorageProvider } from '../utils/storage';
 import { publishToYouTube, publishToInstagram } from './publish';
@@ -13,8 +15,7 @@ import { AppError } from '../middleware/error';
 import config from '../config';
 import logger from '../utils/logger';
 
-const ffmpegBin: string = require('ffmpeg-static');
-const ffprobeBin: string = require('ffprobe-static').path;
+const ffprobePath = ffprobeBin.path;
 
 export interface ClipSettings {
   clipCount: number;
@@ -88,10 +89,6 @@ function jobDirectory(jobId: string): string {
   return path.join(clipsRoot(), jobId);
 }
 
-function isYouTubeUrl(value: string): boolean {
-  return /(^|\/\/)(www\.)?(youtube\.com|youtu\.be)(\/|$)/i.test(value);
-}
-
 async function runCommand(binary: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
     const child = spawn(binary, args, { windowsHide: true });
@@ -152,7 +149,7 @@ async function saveSource(job: ClipJob): Promise<string> {
 }
 
 async function probeDuration(file: string): Promise<number> {
-  const { stdout } = await runCommand(ffprobeBin, [
+  const { stdout } = await runCommand(ffprobePath, [
     '-v',
     'error',
     '-show_entries',

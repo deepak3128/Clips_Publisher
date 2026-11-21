@@ -6,6 +6,7 @@ A production-ready SaaS platform for uploading multiple short-form videos in bul
 
 ✨ **Core Features**
 
+- ✂️ **Clip Publisher** - Turn a YouTube link, public URL, or local video into smart clips with auto captions, then download or publish them
 - 🎥 **Bulk Video Upload** - Upload 50+ videos simultaneously with drag-and-drop interface
 - 📅 **Smart Scheduling** - Fixed interval, custom dates, or bulk scheduling with multiple posts per day
 - 🚀 **Multi-Platform Publishing** - Auto-publish to YouTube Shorts and Instagram Reels
@@ -305,6 +306,8 @@ See [API.md](docs/API.md) for complete documentation.
 - `JWT_SECRET` - JWT signing secret
 - `API_TOKEN` - Shared token used by n8n to call publish/schedule endpoints
 - `REDIS_ENABLED` / `REDIS_HOST` / `REDIS_PORT` - Upload queue (set `REDIS_ENABLED=false` to run without Redis)
+- `CLIPS_DIR` / `CLIPS_PUBLIC_URL` / `MAX_CLIP_DURATION_SECONDS` - Clip rendering output and download URLs
+- `OPENAI_API_KEY` / `OPENAI_TRANSCRIPTION_MODEL` - Whisper transcription for auto captions
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` - Google OAuth
 - `META_APP_ID` / `META_APP_SECRET` - Meta OAuth
 - `YOUTUBE_API_KEY` - YouTube Data API key
