@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 
 export const useAuth = () => {
   const router = useRouter();
-  const { user, token, setUser, setToken, setIsLoading, setError, logout } = useAuthStore();
+  const { user, token, error, setUser, setToken, setIsLoading, setError, logout } = useAuthStore();
 
   const register = async (email: string, name: string, password: string) => {
     try {
@@ -14,7 +14,7 @@ export const useAuth = () => {
       const { user: newUser, token: newToken } = response.data;
       setUser(newUser);
       setToken(newToken);
-      router.push('/dashboard');
+      router.push('/clips');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Registration failed');
     } finally {
@@ -30,7 +30,7 @@ export const useAuth = () => {
       const { user: newUser, token: newToken } = response.data;
       setUser(newUser);
       setToken(newToken);
-      router.push('/dashboard');
+      router.push('/clips');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Login failed');
     } finally {
@@ -46,6 +46,7 @@ export const useAuth = () => {
   return {
     user,
     token,
+    error,
     register,
     login,
     logout: handleLogout,

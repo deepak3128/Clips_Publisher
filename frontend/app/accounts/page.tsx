@@ -61,8 +61,8 @@ export default function AccountsPage() {
                   <div>
                     <h3 className="font-semibold capitalize">{account.platform}</h3>
                     <p className="text-sm text-slate-600">
-                      {account.accountDetails.name ||
-                        account.accountDetails.email ||
+                      {(account.account_details || account.accountDetails)?.name ||
+                        (account.account_details || account.accountDetails)?.email ||
                         'Connected'}
                     </p>
                   </div>

@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -7,7 +8,9 @@ import authRoutes from './routes/auth';
 import videoRoutes from './routes/video';
 import scheduleRoutes from './routes/schedule';
 import socialAccountRoutes from './routes/socialAccount';
-import { authMiddleware } from './middleware/auth';
+import adminRoutes from './routes/admin';
+import publishRoutes from './routes/publish';
+import clipRoutes from './routes/clip';
 import { errorHandler, notFoundHandler } from './middleware/error';
 import logger from './utils/logger';
 import config from './config';
@@ -34,11 +37,17 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
+// Rendered clips (downloadable and used as publish sources)
+app.use('/clips', express.static(path.resolve(process.cwd(), config.clips.dir)));
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/schedules', scheduleRoutes);
 app.use('/api/accounts', socialAccountRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/publish', publishRoutes);
+app.use('/api/clips', clipRoutes);
 
 // Error handling
 app.use(notFoundHandler);

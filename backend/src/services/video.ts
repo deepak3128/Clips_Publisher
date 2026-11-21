@@ -45,6 +45,11 @@ export async function getVideoById(userId: string, videoId: string): Promise<Vid
   return video;
 }
 
+export async function getVideoForPublishing(videoId: string): Promise<Video | null> {
+  const db = getDatabase();
+  return db('videos').where({ id: videoId }).first() || null;
+}
+
 export async function getUserVideos(userId: string, status?: string, limit: number = 20, offset: number = 0): Promise<{ videos: Video[]; total: number }> {
   const db = getDatabase();
 
@@ -64,6 +69,28 @@ export async function getUserVideos(userId: string, status?: string, limit: numb
   const videos = await query.limit(limit).offset(offset).orderBy('uploaded_at', 'desc');
 
   return { videos, total: parseInt(count as string) };
+}
+
+export async function updateVideoMetadata(
+  userId: string,
+  videoId: string,
+  data: { title?: string; caption?: string; hashtags?: string[] },
+): Promise<Video> {
+  const db = getDatabase();
+
+  const video = await db('videos').where({ id: videoId, user_id: userId }).first();
+  if (!video) {
+    throw new AppError('Video not found', 404);
+  }
+
+  const updateData: Record<string, any> = { updated_at: new Date() };
+  if (data.title !== undefined) updateData.title = data.title;
+  if (data.caption !== undefined) updateData.caption = data.caption;
+  if (data.hashtags !== undefined) updateData.hashtags = JSON.stringify(data.hashtags);
+
+  const [updated] = await db('videos').where({ id: videoId }).update(updateData).returning('*');
+
+  return updated;
 }
 
 export async function updateVideoStatus(userId: string, videoId: string, status: string): Promise<Video> {

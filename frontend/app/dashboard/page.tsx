@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
-import { Button } from '@/components/ui/Button';
 import { apiClient } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
 import type { DashboardStats, Video } from '@/types';
@@ -95,7 +94,7 @@ export default function DashboardPage() {
                         <div>
                           <h3 className="font-semibold">{video.title}</h3>
                           <p className="text-sm text-slate-600">
-                            {video.fileName}
+                            {video.file_name || video.fileName}
                           </p>
                         </div>
                         <span

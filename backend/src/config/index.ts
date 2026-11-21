@@ -66,7 +66,11 @@ export const config = {
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379', 10),
+    enabled: process.env.REDIS_ENABLED !== 'false',
   },
+
+  // Shared token used by trusted automation (n8n) to call service endpoints
+  apiToken: process.env.API_TOKEN,
 
   // Email
   email: {
@@ -86,6 +90,19 @@ export const config = {
   n8n: {
     url: process.env.N8N_URL,
     apiKey: process.env.N8N_API_KEY,
+  },
+
+  // Clip publisher
+  clips: {
+    dir: process.env.CLIPS_DIR || 'clips',
+    publicUrl: process.env.CLIPS_PUBLIC_URL || `${process.env.API_URL || 'http://localhost:5000'}/clips`,
+    maxDurationSeconds: parseInt(process.env.MAX_CLIP_DURATION_SECONDS || '60', 10),
+  },
+
+  // Transcription for auto-captions
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY,
+    transcriptionModel: process.env.OPENAI_TRANSCRIPTION_MODEL || 'whisper-1',
   },
 
   // Logging

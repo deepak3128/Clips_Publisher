@@ -2,6 +2,15 @@ import { getDatabase } from '../utils/database';
 import { AppError } from '../middleware/error';
 import type { Schedule } from '../types';
 
+export interface PendingSchedule extends Schedule {
+  user_id: string;
+  user_email: string;
+  title: string;
+  file_url: string;
+  caption: string;
+  hashtags: string[] | string;
+}
+
 export async function createSchedules(
   videoId: string,
   platform: 'youtube' | 'instagram' | 'both',
@@ -16,36 +25,103 @@ export async function createSchedules(
     status: 'pending',
   }));
 
-  return db('schedules').insert(schedules).returning('*');
+  const created = await db('schedules').insert(schedules).returning('*');
+
+  await db('videos')
+    .where({ id: videoId })
+    .update({ status: 'scheduled', updated_at: new Date() });
+
+  return created;
 }
 
 export async function getSchedulesByVideo(videoId: string): Promise<Schedule[]> {
   const db = getDatabase();
-  return db('schedules').where({ video_id: videoId });
+  return db('schedules').where({ video_id: videoId }).orderBy('publish_date', 'asc');
 }
 
-export async function getPendingSchedules(): Promise<Schedule[]> {
+export async function getPendingSchedules(userId?: string): Promise<PendingSchedule[]> {
   const db = getDatabase();
-  return db('schedules').where({ status: 'pending' }).andWhere('publish_date', '<=', new Date());
+
+  let query = db('schedules')
+    .join('videos', 'schedules.video_id', 'videos.id')
+    .join('users', 'videos.user_id', 'users.id')
+    .where('schedules.status', 'pending')
+    .andWhere('schedules.publish_date', '<=', new Date())
+    .select(
+      'schedules.*',
+      'videos.user_id',
+      'videos.title',
+      'videos.file_url',
+      'videos.caption',
+      'videos.hashtags',
+      'users.email as user_email',
+    )
+    .orderBy('schedules.publish_date', 'asc');
+
+  if (userId) {
+    query = query.andWhere('videos.user_id', userId);
+  }
+
+  return query;
 }
 
-export async function updateScheduleStatus(scheduleId: string, status: 'pending' | 'published' | 'failed'): Promise<Schedule> {
+export async function getScheduleById(scheduleId: string): Promise<Schedule> {
+  const db = getDatabase();
+  const schedule = await db('schedules').where({ id: scheduleId }).first();
+  if (!schedule) {
+    throw new AppError('Schedule not found', 404);
+  }
+  return schedule;
+}
+
+export async function updateScheduleStatus(
+  scheduleId: string,
+  status: 'pending' | 'published' | 'failed',
+  userId?: string,
+): Promise<Schedule> {
   const db = getDatabase();
 
-  const [schedule] = await db('schedules')
+  const schedule = await db('schedules')
+    .join('videos', 'schedules.video_id', 'videos.id')
+    .where('schedules.id', scheduleId)
+    .select('schedules.*', 'videos.user_id')
+    .first();
+
+  if (!schedule || (userId && schedule.user_id !== userId)) {
+    throw new AppError('Schedule not found', 404);
+  }
+
+  const [updated] = await db('schedules')
     .where({ id: scheduleId })
     .update({ status, updated_at: new Date() })
     .returning('*');
 
-  if (!schedule) {
+  if (status === 'published') {
+    await db('videos')
+      .where({ id: schedule.video_id })
+      .update({ status: 'published', updated_at: new Date() });
+  } else if (status === 'failed') {
+    await db('videos')
+      .where({ id: schedule.video_id })
+      .update({ status: 'failed', updated_at: new Date() });
+  }
+
+  return updated;
+}
+
+export async function deleteSchedule(scheduleId: string, userId?: string): Promise<void> {
+  const db = getDatabase();
+
+  const schedule = await db('schedules')
+    .join('videos', 'schedules.video_id', 'videos.id')
+    .where('schedules.id', scheduleId)
+    .select('schedules.id', 'videos.user_id')
+    .first();
+
+  if (!schedule || (userId && schedule.user_id !== userId)) {
     throw new AppError('Schedule not found', 404);
   }
 
-  return schedule;
-}
-
-export async function deleteSchedule(scheduleId: string): Promise<void> {
-  const db = getDatabase();
   await db('schedules').where({ id: scheduleId }).delete();
 }
 
@@ -58,8 +134,8 @@ export async function bulkScheduleVideos(
 ): Promise<Schedule[]> {
   const db = getDatabase();
 
-  let schedules: any[] = [];
-  let currentDate = new Date(startDate);
+  const schedules: any[] = [];
+  const currentDate = new Date(startDate);
   let postsCreated = 0;
 
   for (const videoId of videoIds) {

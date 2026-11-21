@@ -1,10 +1,10 @@
-import jwt from 'jsonwebtoken';
-import config from './config';
+import jwt, { SignOptions } from 'jsonwebtoken';
+import config from '../config';
 import type { JWTPayload } from '../types';
 
 export function generateToken(payload: JWTPayload): string {
   return jwt.sign(payload, config.jwt.secret, {
-    expiresIn: config.jwt.expiry,
+    expiresIn: config.jwt.expiry as SignOptions['expiresIn'],
   });
 }
 

@@ -29,31 +29,34 @@ export function DragDropArea({
     setIsDragging(false);
   }, []);
 
-  const validateFiles = (files: File[]): boolean => {
-    setError(null);
+  const validateFiles = useCallback(
+    (files: File[]): boolean => {
+      setError(null);
 
-    if (!multiple && files.length > 1) {
-      setError('Please select only one file');
-      return false;
-    }
-
-    const acceptedTypes = accept.split(',').map((t) => t.trim());
-
-    for (const file of files) {
-      const ext = `.${file.name.split('.').pop()?.toLowerCase()}`;
-      if (!acceptedTypes.includes(ext)) {
-        setError(`Invalid file type: ${file.name}`);
+      if (!multiple && files.length > 1) {
+        setError('Please select only one file');
         return false;
       }
 
-      if (file.size > maxSize) {
-        setError(`File too large: ${file.name}`);
-        return false;
-      }
-    }
+      const acceptedTypes = accept.split(',').map((t) => t.trim());
 
-    return true;
-  };
+      for (const file of files) {
+        const ext = `.${file.name.split('.').pop()?.toLowerCase()}`;
+        if (!acceptedTypes.includes(ext)) {
+          setError(`Invalid file type: ${file.name}`);
+          return false;
+        }
+
+        if (file.size > maxSize) {
+          setError(`File too large: ${file.name}`);
+          return false;
+        }
+      }
+
+      return true;
+    },
+    [accept, maxSize, multiple],
+  );
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -65,7 +68,7 @@ export function DragDropArea({
         onFilesSelected(files);
       }
     },
-    [onFilesSelected],
+    [onFilesSelected, validateFiles],
   );
 
   const handleFileSelect = useCallback(
@@ -75,7 +78,7 @@ export function DragDropArea({
         onFilesSelected(files);
       }
     },
-    [onFilesSelected],
+    [onFilesSelected, validateFiles],
   );
 
   return (

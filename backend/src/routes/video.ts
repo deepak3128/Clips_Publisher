@@ -23,7 +23,7 @@ router.get('/upload-progress/:videoId', authMiddleware, videoController.getUploa
 router.get('/', authMiddleware, videoController.getVideos);
 router.get('/stats', authMiddleware, videoController.getDashboardStats);
 router.get('/:videoId', authMiddleware, videoController.getVideo);
-router.patch('/:videoId', authMiddleware, videoController.validateCreateVideo, videoController.updateVideo);
+router.patch('/:videoId', authMiddleware, videoController.validateUpdateVideo, videoController.updateVideo);
 router.delete('/:videoId', authMiddleware, videoController.deleteVideo);
 
 export default router;

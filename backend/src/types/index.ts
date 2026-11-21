@@ -1,86 +1,91 @@
+export type UserRole = 'user' | 'admin' | 'suspended';
+
 export interface User {
   id: string;
   email: string;
   name: string;
+  role: UserRole;
   password?: string;
-  googleId?: string;
-  metaId?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  google_id?: string | null;
+  meta_id?: string | null;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export interface ConnectedAccount {
   id: string;
-  userId: string;
+  user_id: string;
   platform: 'youtube' | 'instagram';
-  accessToken: string;
-  refreshToken?: string;
-  expiresAt?: Date;
-  accountDetails: Record<string, any>;
-  createdAt: Date;
-  updatedAt: Date;
+  access_token: string;
+  refresh_token?: string | null;
+  expires_at?: Date | null;
+  account_details: Record<string, any>;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export interface Video {
   id: string;
-  userId: string;
+  user_id: string;
   title: string;
   caption: string;
-  hashtags: string[];
-  thumbnailUrl?: string;
-  fileUrl: string;
-  fileName: string;
-  fileSize: number;
-  duration?: number;
-  resolution?: string;
+  hashtags: string[] | string;
+  thumbnail_url?: string | null;
+  file_url: string;
+  file_name: string;
+  file_size: number;
+  duration?: number | null;
+  resolution?: string | null;
   status: 'draft' | 'scheduled' | 'publishing' | 'published' | 'failed';
-  uploadedAt: Date;
-  createdAt: Date;
-  updatedAt: Date;
+  uploaded_at: Date;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export interface Schedule {
   id: string;
-  videoId: string;
+  video_id: string;
   platform: 'youtube' | 'instagram' | 'both';
-  publishDate: Date;
+  publish_date: Date;
   status: 'pending' | 'published' | 'failed';
-  createdAt: Date;
-  updatedAt: Date;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export interface PublishLog {
   id: string;
-  videoId: string;
+  video_id: string;
   platform: 'youtube' | 'instagram';
-  publishUrl?: string;
+  publish_url?: string | null;
   status: 'pending' | 'success' | 'failed';
-  errorMessage?: string;
-  retryCount: number;
-  createdAt: Date;
-  updatedAt: Date;
+  error_message?: string | null;
+  retry_count: number;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export interface Notification {
   id: string;
-  userId: string;
+  user_id: string;
   type: 'success' | 'failure' | 'warning' | 'info';
   title: string;
   message: string;
   read: boolean;
   channel: 'email' | 'telegram' | 'in-app';
-  createdAt: Date;
+  created_at: Date;
 }
 
 export interface JWTPayload {
   id: string;
   email: string;
+  role?: UserRole;
   iat?: number;
   exp?: number;
 }
 
 export interface UploadProgress {
   videoId: string;
+  userId?: string;
   fileName: string;
   uploadedBytes: number;
   totalBytes: number;

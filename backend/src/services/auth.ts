@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import { getDatabase } from '../utils/database';
 import { generateToken } from '../utils/jwt';
 import { AppError } from '../middleware/error';
-import type { User, JWTPayload } from '../types';
+import type { User } from '../types';
 
 const SALT_ROUNDS = 10;
 
@@ -42,6 +42,10 @@ export async function loginUser(email: string, password: string): Promise<{ user
   const user = await db('users').where({ email }).first();
   if (!user) {
     throw new AppError('Invalid credentials', 401);
+  }
+
+  if (user.role === 'suspended') {
+    throw new AppError('Your account has been suspended', 403);
   }
 
   const passwordMatch = await bcrypt.compare(password, user.password);
@@ -85,6 +89,8 @@ export async function createOrUpdateGoogleUser(email: string, name: string, goog
         google_id: googleId,
       })
       .returning('*');
+  } else if (user.role === 'suspended') {
+    throw new AppError('Your account has been suspended', 403);
   }
 
   const token = generateToken({
@@ -109,6 +115,8 @@ export async function createOrUpdateMetaUser(email: string, name: string, metaId
         meta_id: metaId,
       })
       .returning('*');
+  } else if (user.role === 'suspended') {
+    throw new AppError('Your account has been suspended', 403);
   }
 
   const token = generateToken({

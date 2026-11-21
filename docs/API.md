@@ -416,6 +416,85 @@ Authorization: Bearer {token}
 
 ---
 
+## Publish Endpoints
+
+These endpoints are used by the n8n automation workflows. They accept either a normal user JWT
+or the shared `API_TOKEN` for service-to-service calls. Service calls may act on any user's videos.
+
+### Publish a Video
+
+```http
+POST /publish/youtube
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{ "videoId": "video-id" }
+```
+
+```http
+POST /publish/instagram
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{ "videoId": "video-id" }
+```
+
+**Response:** `200 OK`
+
+```json
+{ "success": true, "url": "https://www.youtube.com/shorts/abc123" }
+```
+
+On failure the response is `{ "success": false, "error": "..." }` and a failed publish log is
+recorded.
+
+### List Failed Publishes
+
+```http
+GET /publish/failed
+Authorization: Bearer {token}
+```
+
+Returns up to 50 failed logs with fewer than 3 retries as `{ "logs": [...] }`.
+
+### Retry a Failed Publish
+
+```http
+POST /publish/retry
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{ "publishLogId": "log-id" }
+```
+
+---
+
+## Admin Endpoints
+
+All admin endpoints require a user JWT with `role: "admin"`.
+
+| Method | Endpoint | Description |
+| ------ | -------- | ----------- |
+| GET | `/admin/stats` | Platform-wide counters |
+| GET | `/admin/users?page=1&limit=20` | Paginated user list |
+| POST | `/admin/users/:userId/suspend` | Suspend a user (not admins or yourself) |
+| POST | `/admin/users/:userId/unsuspend` | Restore a suspended user |
+| GET | `/admin/publish-logs?page=1&limit=20` | Paginated publish history |
+| POST | `/admin/publish-logs/:logId/retry` | Re-run a failed publish |
+
+---
+
+## Automation Schedule Endpoints
+
+Used by the `scheduled-publishing` n8n workflow:
+
+| Method | Endpoint | Description |
+| ------ | -------- | ----------- |
+| GET | `/schedules/pending` | Due, pending schedules with video/user details |
+| PATCH | `/schedules/:scheduleId/status` | Set schedule status to `pending`, `published`, or `failed` |
+
+---
+
 ## Error Responses
 
 ### 400 Bad Request

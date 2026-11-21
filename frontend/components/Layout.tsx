@@ -3,11 +3,9 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import { useRouter } from 'next/navigation';
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
-  const router = useRouter();
 
   const handleLogout = () => {
     logout();
@@ -23,6 +21,12 @@ export default function Layout({ children }: { children: ReactNode }) {
           </div>
 
           <nav className="space-y-4">
+            <Link
+              href="/clips"
+              className="block px-4 py-2 rounded bg-blue-900 hover:bg-slate-800 transition font-medium"
+            >
+              Clip Publisher
+            </Link>
             <Link
               href="/dashboard"
               className="block px-4 py-2 rounded hover:bg-slate-800 transition"
@@ -59,6 +63,14 @@ export default function Layout({ children }: { children: ReactNode }) {
             >
               Settings
             </Link>
+            {user.role === 'admin' && (
+              <Link
+                href="/admin"
+                className="block px-4 py-2 rounded hover:bg-slate-800 transition text-purple-400"
+              >
+                Admin
+              </Link>
+            )}
           </nav>
 
           <div className="mt-auto pt-6 border-t border-slate-700">

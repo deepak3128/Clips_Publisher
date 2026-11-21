@@ -10,7 +10,7 @@ export default function Page() {
 
   useEffect(() => {
     if (token) {
-      router.push('/dashboard');
+      router.push('/clips');
     } else {
       router.push('/auth/login');
     }

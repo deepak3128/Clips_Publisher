@@ -1,12 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
-import { body, param, query, validationResult } from 'express-validator';
+import { body, validationResult } from 'express-validator';
 import * as videoService from '../services/video';
 import { getStorageProvider } from '../utils/storage';
 import { AppError } from '../middleware/error';
+import { createUploadJob, getUploadProgress as getQueueProgress } from '../services/queue';
+import { notifyUploadProcessed } from '../utils/n8n';
 import logger from '../utils/logger';
 import type { UploadProgress } from '../types';
 
-// In-memory storage for upload progress (in production, use Redis)
 const uploadProgress = new Map<string, UploadProgress>();
 
 export const validateCreateVideo = [
@@ -15,16 +16,70 @@ export const validateCreateVideo = [
   body('hashtags').optional().isArray(),
 ];
 
+export const validateUpdateVideo = [
+  body('title').optional().trim().notEmpty().withMessage('Title cannot be empty'),
+  body('caption').optional().trim(),
+  body('hashtags').optional().isArray(),
+];
+
+const MIN_VIDEO_SIZE_BYTES = 50 * 1024;
+const MAX_VIDEO_SIZE_BYTES = 500 * 1024 * 1024;
+
+function normalizeHashtags(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map(String).filter(Boolean);
+  }
+
+  if (typeof value !== 'string') return [];
+
+  return value
+    .split(/[\s,]+/)
+    .map((tag) => tag.replace(/^#/, '').trim())
+    .filter(Boolean);
+}
+
+function validateVideoFile(file: Express.Multer.File): string | null {
+  const mime = file.mimetype;
+  if (!['video/mp4', 'video/quicktime'].includes(mime)) {
+    return 'Only MP4 and MOV files are accepted';
+  }
+
+  if (file.size < MIN_VIDEO_SIZE_BYTES) {
+    return 'File is too small or empty';
+  }
+
+  if (file.size > MAX_VIDEO_SIZE_BYTES) {
+    return 'File exceeds maximum size of 500MB';
+  }
+
+  return null;
+}
+
 export async function uploadVideos(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     if (!req.user || !req.files) {
       throw new AppError('Missing authentication or files', 400);
     }
 
+    const files = (
+      Array.isArray(req.files) ? req.files : Object.values(req.files).flat()
+    ) as Express.Multer.File[];
+
+    for (const file of files) {
+      const validationError = validateVideoFile(file);
+      if (validationError) {
+        throw new AppError(validationError, 400);
+      }
+    }
+
+    const defaultTitle = typeof req.body.title === 'string' ? req.body.title.trim() : '';
+    const defaultCaption = typeof req.body.caption === 'string' ? req.body.caption.trim() : '';
+    const defaultHashtags = normalizeHashtags(req.body.hashtags);
+
     const storage = getStorageProvider();
     const uploadedVideos = [];
 
-    for (const file of Array.isArray(req.files) ? req.files : [req.files]) {
+    for (const [index, file] of files.entries()) {
       try {
         const fileUrl = await storage.upload({
           filename: file.originalname,
@@ -32,11 +87,18 @@ export async function uploadVideos(req: Request, res: Response, next: NextFuncti
           data: file.buffer,
         });
 
+        const baseName = file.originalname.replace(/\.[^.]+$/, '');
+        const title = defaultTitle
+          ? files.length > 1
+            ? `${defaultTitle} ${index + 1}`
+            : defaultTitle
+          : baseName;
+
         const video = await videoService.createVideo(
           req.user.id,
-          file.originalname.split('.')[0],
-          '',
-          [],
+          title,
+          defaultCaption,
+          defaultHashtags,
           fileUrl,
           file.originalname,
           file.size,
@@ -44,14 +106,22 @@ export async function uploadVideos(req: Request, res: Response, next: NextFuncti
 
         uploadedVideos.push(video);
 
-        // Track progress
+        const job = await createUploadJob(video.id, req.user.id, file.originalname, file.size);
+        if (!job) {
+          // Queue is unavailable; still notify n8n so processing is not blocked.
+          await notifyUploadProcessed(video.id, req.user.id, file.originalname, file.size);
+        }
+
         uploadProgress.set(video.id, {
           videoId: video.id,
+          userId: req.user.id,
           fileName: file.originalname,
           uploadedBytes: file.size,
           totalBytes: file.size,
           progress: 100,
         });
+
+        setTimeout(() => uploadProgress.delete(video.id), 60 * 60 * 1000).unref();
       } catch (error) {
         logger.error({ error }, 'Failed to upload file');
       }
@@ -65,10 +135,23 @@ export async function uploadVideos(req: Request, res: Response, next: NextFuncti
 
 export async function getUploadProgress(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { videoId } = req.params;
-    const progress = uploadProgress.get(videoId);
+    if (!req.user) {
+      throw new AppError('Not authenticated', 401);
+    }
 
-    if (!progress) {
+    const { videoId } = req.params;
+    const queueProgress = await getQueueProgress(videoId, req.user.id);
+
+    if (queueProgress !== null) {
+      res.json({
+        videoId,
+        progress: queueProgress,
+      });
+      return;
+    }
+
+    const progress = uploadProgress.get(videoId);
+    if (!progress || (progress.userId && progress.userId !== req.user.id)) {
       throw new AppError('Progress not found', 404);
     }
 
@@ -120,8 +203,8 @@ export async function updateVideo(req: Request, res: Response, next: NextFunctio
       throw new AppError('Validation failed', 400);
     }
 
-    // Implementation would update video metadata
-    const video = await videoService.getVideoById(req.user.id, req.params.videoId);
+    const { title, caption, hashtags } = req.body;
+    const video = await videoService.updateVideoMetadata(req.user.id, req.params.videoId, { title, caption, hashtags });
     res.json(video);
   } catch (error) {
     next(error);

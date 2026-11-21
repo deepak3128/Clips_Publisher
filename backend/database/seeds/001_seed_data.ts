@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import bcrypt from 'bcryptjs';
 
 export async function seed(knex: Knex): Promise<void> {
   // Clear existing data
@@ -9,26 +10,32 @@ export async function seed(knex: Knex): Promise<void> {
   await knex('connected_accounts').del();
   await knex('users').del();
 
-  // Insert test users
-  const users = await knex('users').insert([
-    {
-      email: 'demo@autoshorts.com',
-      name: 'Demo User',
-      password: '$2b$10$Vf5VwG2K5L5Q5Q5Q5Q5Q5e5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q', // hashed 'password123'
-      google_id: null,
-      meta_id: null,
-    },
-    {
-      email: 'creator@autoshorts.com',
-      name: 'Test Creator',
-      password: '$2b$10$Vf5VwG2K5L5Q5Q5Q5Q5Q5e5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q5Q', // hashed 'password123'
-      google_id: null,
-      meta_id: null,
-    },
-  ]);
+  const passwordHash = await bcrypt.hash('password123', 10);
 
-  const userId = users[0];
-  const creatorId = users[1];
+  // Insert test users
+  const users = await knex('users')
+    .insert([
+      {
+        email: 'demo@autoshorts.com',
+        name: 'Demo User',
+        role: 'admin',
+        password: passwordHash,
+        google_id: null,
+        meta_id: null,
+      },
+      {
+        email: 'creator@autoshorts.com',
+        name: 'Test Creator',
+        role: 'user',
+        password: passwordHash,
+        google_id: null,
+        meta_id: null,
+      },
+    ])
+    .returning(['id']);
+
+  const userId = users[0].id;
+  const creatorId = users[1].id;
 
   // Insert connected accounts (mock)
   await knex('connected_accounts').insert([
@@ -108,11 +115,11 @@ export async function seed(knex: Knex): Promise<void> {
       status: 'draft',
       uploaded_at: new Date(),
     },
-  ]);
+  ]).returning(['id']);
 
-  const videoId1 = videos[0];
-  const videoId2 = videos[1];
-  const videoId3 = videos[2];
+  const videoId1 = videos[0].id;
+  const videoId2 = videos[1].id;
+  const videoId3 = videos[2].id;
 
   // Insert schedules
   await knex('schedules').insert([
@@ -148,28 +155,25 @@ export async function seed(knex: Knex): Promise<void> {
       video_id: videoId3,
       platform: 'youtube',
       status: 'success',
-      published_url: 'https://youtube.com/shorts/abc123xyz',
+      publish_url: 'https://youtube.com/shorts/abc123xyz',
       error_message: null,
       retry_count: 0,
-      published_at: new Date(Date.now() - 86400000),
     },
     {
       video_id: videoId3,
       platform: 'instagram',
       status: 'success',
-      published_url: 'https://instagram.com/reel/abc123xyz',
+      publish_url: 'https://instagram.com/reel/abc123xyz',
       error_message: null,
       retry_count: 0,
-      published_at: new Date(Date.now() - 86400000),
     },
     {
       video_id: videoId1,
       platform: 'youtube',
       status: 'failed',
-      published_url: null,
+      publish_url: null,
       error_message: 'Invalid video format',
       retry_count: 1,
-      published_at: new Date(Date.now() - 604800000), // 7 days ago
     },
   ]);
 
@@ -181,10 +185,6 @@ export async function seed(knex: Knex): Promise<void> {
       channel: 'email',
       title: 'Video Published',
       message: 'Your video "Fitness Routine" was published successfully!',
-      data: JSON.stringify({
-        videoId: videoId3,
-        platform: 'youtube',
-      }),
       read: false,
       created_at: new Date(Date.now() - 3600000), // 1 hour ago
     },
@@ -195,11 +195,6 @@ export async function seed(knex: Knex): Promise<void> {
       title: 'Publish Failed',
       message:
         'Failed to publish "Funny Pet Moments" to YouTube. Check video format.',
-      data: JSON.stringify({
-        videoId: videoId1,
-        platform: 'youtube',
-        error: 'Invalid video format',
-      }),
       read: true,
       created_at: new Date(Date.now() - 604800000), // 7 days ago
     },
@@ -209,10 +204,6 @@ export async function seed(knex: Knex): Promise<void> {
       channel: 'email',
       title: 'Scheduled Publishing',
       message: 'Your video "Quick Cooking Hacks" is scheduled to publish tomorrow.',
-      data: JSON.stringify({
-        videoId: videoId2,
-        platform: 'both',
-      }),
       read: true,
       created_at: new Date(),
     },

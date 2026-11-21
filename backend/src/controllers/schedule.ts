@@ -18,6 +18,10 @@ export const validateBulkSchedule = [
   body('postingTimes').isArray({ min: 1 }),
 ];
 
+export const validateUpdateScheduleStatus = [
+  body('status').isIn(['pending', 'published', 'failed']),
+];
+
 export async function createSchedules(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     if (!req.user) {
@@ -31,14 +35,17 @@ export async function createSchedules(req: Request, res: Response, next: NextFun
 
     const { videoIds, platform, publishDates } = req.body;
 
-    // Verify videos belong to user
     for (const videoId of videoIds) {
       await videoService.getVideoById(req.user.id, videoId);
     }
 
     const schedules = [];
     for (const videoId of videoIds) {
-      const created = await scheduleService.createSchedules(videoId, platform, publishDates.map((d: string) => new Date(d)));
+      const created = await scheduleService.createSchedules(
+        videoId,
+        platform,
+        publishDates.map((d: string) => new Date(d)),
+      );
       schedules.push(...created);
     }
 
@@ -61,19 +68,32 @@ export async function bulkScheduleVideos(req: Request, res: Response, next: Next
 
     const { videoIds, platform, startDate, postsPerDay, postingTimes } = req.body;
 
-    // Verify videos belong to user
     for (const videoId of videoIds) {
       await videoService.getVideoById(req.user.id, videoId);
     }
 
-    const schedules = await scheduleService.bulkScheduleVideos(videoIds, platform, new Date(startDate), postsPerDay, postingTimes);
+    const schedules = await scheduleService.bulkScheduleVideos(
+      videoIds,
+      platform,
+      new Date(startDate),
+      postsPerDay,
+      postingTimes,
+    );
 
-    // Update video status to scheduled
     for (const videoId of videoIds) {
       await videoService.updateVideoStatus(req.user.id, videoId, 'scheduled');
     }
 
     res.status(201).json({ schedules });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getPendingSchedules(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const schedules = await scheduleService.getPendingSchedules(req.isService ? undefined : req.user?.id);
+    res.json({ schedules });
   } catch (error) {
     next(error);
   }
@@ -86,12 +106,31 @@ export async function getSchedules(req: Request, res: Response, next: NextFuncti
     }
 
     const { videoId } = req.params;
-
-    // Verify video belongs to user
     await videoService.getVideoById(req.user.id, videoId);
 
     const schedules = await scheduleService.getSchedulesByVideo(videoId);
     res.json({ schedules });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateScheduleStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      throw new AppError('Validation failed', 400);
+    }
+
+    const { scheduleId } = req.params;
+    const { status } = req.body;
+
+    const schedule = await scheduleService.updateScheduleStatus(
+      scheduleId,
+      status,
+      req.isService ? undefined : req.user?.id,
+    );
+    res.json({ schedule });
   } catch (error) {
     next(error);
   }
@@ -103,9 +142,7 @@ export async function deleteSchedule(req: Request, res: Response, next: NextFunc
       throw new AppError('Not authenticated', 401);
     }
 
-    const { scheduleId } = req.params;
-    await scheduleService.deleteSchedule(scheduleId);
-
+    await scheduleService.deleteSchedule(req.params.scheduleId, req.user.id);
     res.json({ message: 'Schedule deleted' });
   } catch (error) {
     next(error);

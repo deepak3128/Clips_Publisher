@@ -303,6 +303,8 @@ See [API.md](docs/API.md) for complete documentation.
 
 - `DATABASE_URL` - PostgreSQL connection string
 - `JWT_SECRET` - JWT signing secret
+- `API_TOKEN` - Shared token used by n8n to call publish/schedule endpoints
+- `REDIS_ENABLED` / `REDIS_HOST` / `REDIS_PORT` - Upload queue (set `REDIS_ENABLED=false` to run without Redis)
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` - Google OAuth
 - `META_APP_ID` / `META_APP_SECRET` - Meta OAuth
 - `YOUTUBE_API_KEY` - YouTube Data API key

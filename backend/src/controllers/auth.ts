@@ -22,7 +22,7 @@ export async function register(req: Request, res: Response, next: NextFunction):
     const { user, token } = await authService.registerUser(email, name, password);
 
     res.status(201).json({
-      user: { id: user.id, email: user.email, name: user.name },
+      user: { id: user.id, email: user.email, name: user.name, role: user.role },
       token,
     });
   } catch (error) {
@@ -41,7 +41,7 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
     const { user, token } = await authService.loginUser(email, password);
 
     res.json({
-      user: { id: user.id, email: user.email, name: user.name },
+      user: { id: user.id, email: user.email, name: user.name, role: user.role },
       token,
     });
   } catch (error) {
@@ -55,7 +55,7 @@ export async function googleCallback(req: Request, res: Response, next: NextFunc
     const { user, token } = await authService.createOrUpdateGoogleUser(email, name, googleId);
 
     res.json({
-      user: { id: user.id, email: user.email, name: user.name },
+      user: { id: user.id, email: user.email, name: user.name, role: user.role },
       token,
     });
   } catch (error) {
@@ -69,7 +69,7 @@ export async function metaCallback(req: Request, res: Response, next: NextFuncti
     const { user, token } = await authService.createOrUpdateMetaUser(email, name, metaId);
 
     res.json({
-      user: { id: user.id, email: user.email, name: user.name },
+      user: { id: user.id, email: user.email, name: user.name, role: user.role },
       token,
     });
   } catch (error) {
@@ -88,6 +88,7 @@ export async function getProfile(req: Request, res: Response, next: NextFunction
       id: user.id,
       email: user.email,
       name: user.name,
+      role: user.role,
     });
   } catch (error) {
     next(error);

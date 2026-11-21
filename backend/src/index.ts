@@ -1,5 +1,6 @@
 import app from './app';
 import { initializeDatabase, closeDatabase } from './utils/database';
+import { startUploadWorker, closeUploadQueue } from './services/queue';
 import config from './config';
 import logger from './utils/logger';
 
@@ -9,23 +10,22 @@ async function startServer(): Promise<void> {
     await initializeDatabase();
     logger.info('Database connected');
 
+    startUploadWorker();
+
     // Start server
     app.listen(config.port, () => {
       logger.info({ port: config.port }, 'Server started');
     });
 
-    // Graceful shutdown
-    process.on('SIGTERM', async () => {
-      logger.info('SIGTERM received, shutting down gracefully');
+    const shutdown = async (signal: string) => {
+      logger.info({ signal }, 'Shutting down gracefully');
+      await closeUploadQueue();
       await closeDatabase();
       process.exit(0);
-    });
+    };
 
-    process.on('SIGINT', async () => {
-      logger.info('SIGINT received, shutting down gracefully');
-      await closeDatabase();
-      process.exit(0);
-    });
+    process.on('SIGTERM', () => void shutdown('SIGTERM'));
+    process.on('SIGINT', () => void shutdown('SIGINT'));
   } catch (error) {
     logger.error({ error }, 'Failed to start server');
     process.exit(1);

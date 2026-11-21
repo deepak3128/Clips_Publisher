@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import multer from 'multer';
 import logger from '../utils/logger';
 
 interface ApiError extends Error {
@@ -25,6 +26,11 @@ export function errorHandler(err: ApiError | Error, _req: Request, res: Response
       error: err.message,
       code: err.code,
     });
+    return;
+  }
+
+  if (err instanceof multer.MulterError) {
+    res.status(400).json({ error: err.message, code: err.code });
     return;
   }
 

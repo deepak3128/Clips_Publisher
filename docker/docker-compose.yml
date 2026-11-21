@@ -71,6 +71,12 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD}
       SMTP_FROM: ${SMTP_FROM}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_ENABLED: "true"
+      API_TOKEN: ${API_TOKEN:-change_me_automation_token}
+      N8N_URL: http://n8n:5678
+      N8N_API_KEY: ${N8N_API_KEY:-}
     ports:
       - "5000:5000"
     healthcheck:
@@ -115,6 +121,8 @@ services:
       N8N_QUEUE_MODE_ACTIVE: "false"
       WEBHOOK_TUNNEL_URL: ${N8N_WEBHOOK_URL:-http://n8n:5678/}
       DATABASE_URL: postgresql://${DB_USER:-user}:${DB_PASSWORD:-password}@postgres:5432/n8n
+      API_URL: http://backend:5000
+      API_TOKEN: ${API_TOKEN:-change_me_automation_token}
     volumes:
       - n8n_data:/home/node/.n8n
     depends_on:
